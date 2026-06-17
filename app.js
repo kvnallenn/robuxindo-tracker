@@ -35,7 +35,10 @@ async function checkOrders() {
       console.log("Sent:", order.orderNumber);
     }
   } catch (err) {
-    console.error(err.message);
+    console.log("STATUS:", err.response?.status);
+    console.log("DATA:", JSON.stringify(err.response?.data));
+    console.log("HEADERS:", err.response?.headers);
+    console.log("MESSAGE:", err.message);
   }
 }
 
