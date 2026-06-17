@@ -1,49 +1,79 @@
-const axios = require("axios");
+const axios = require('axios');
 
-const TOKEN = process.env.TOKEN;
+const EMAIL = process.env.EMAIL;
+const PASSWORD = process.env.PASSWORD;
 const GAS_URL = process.env.GAS_URL;
 
 const API_URL =
-  "https://apimenyala.robuxindo.com/api/admin-orders?productType=VILOG&page=1&perPage=20&sortField=createdAt&sortOrder=desc&status=PENDING&paymentStatus=SUCCESS";
+  'https://apimenyala.robuxindo.com/api/admin-orders?productType=VILOG&page=1&perPage=20&sortField=createdAt&sortOrder=desc&status=PENDING&paymentStatus=SUCCESS';
 
 async function checkOrders() {
   try {
-    console.log("Checking orders...");
+    console.log('Login...');
 
-    const res = await axios.get(API_URL, {
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-      },
-    });
+    const login = await axios.post(
+      'https://apimenyala.robuxindo.com/api/admin-auth/login',
+      {
+        email: EMAIL,
+        password: PASSWORD
+      }
+    );
 
-    const items = res.data?.data?.items || [];
+    const token =
+      login.data.data.accessToken;
 
-    for (const order of items) {
-      await axios.post(GAS_URL, {
-        id: order.id,
-        orderNumber: order.orderNumber,
-        username: order.username,
-        robux: order.robux,
-        totalAmount: order.totalAmount,
-        customerEmail: order.customerEmail,
-        customerPhone: order.customerPhone,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        createdAt: order.createdAt,
-      });
+    console.log('Login berhasil');
 
-      console.log("Sent:", order.orderNumber);
+    const response = await axios.get(
+      API_URL,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const orders =
+      response.data?.data?.items || [];
+
+    console.log(
+      `Jumlah order ditemukan: ${orders.length}`
+    );
+
+    for (const order of orders) {
+      try {
+        await axios.post(GAS_URL, {
+          orderNumber: order.orderNumber,
+          username: order.username,
+          robux: order.robux,
+          totalAmount: order.totalAmount,
+          customerEmail:
+            order.customerEmail,
+          createdAt: order.createdAt
+        });
+
+        console.log(
+          `Berhasil kirim ${order.orderNumber}`
+        );
+      } catch (err) {
+        console.error(
+          `Gagal kirim ${order.orderNumber}`
+        );
+
+        console.error(
+          err.response?.data ||
+          err.message
+        );
+      }
     }
   } catch (err) {
-    console.log("STATUS:", err.response?.status);
-    console.log("DATA:", JSON.stringify(err.response?.data));
-    console.log("HEADERS:", err.response?.headers);
-    console.log("MESSAGE:", err.message);
+    console.error('ERROR');
+
+    console.error(
+      err.response?.data ||
+      err.message
+    );
   }
 }
-
-console.log("TOKEN ADA:", !!process.env.TOKEN);
-
-console.log("PANJANG TOKEN:", process.env.TOKEN?.length);
 
 checkOrders();
