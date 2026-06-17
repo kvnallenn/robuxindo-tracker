@@ -1,7 +1,6 @@
 const axios = require('axios');
 
-const EMAIL = process.env.EMAIL;
-const PASSWORD = process.env.PASSWORD;
+const TOKEN = process.env.TOKEN;
 const GAS_URL = process.env.GAS_URL;
 
 const API_URL =
@@ -9,69 +8,51 @@ const API_URL =
 
 async function checkOrders() {
   try {
-    console.log('Login...');
+    console.log('Checking orders...');
 
-    const login = await axios.post(
-      'https://apimenyala.robuxindo.com/api/admin-auth/login',
-      {
-        email: EMAIL,
-        password: PASSWORD
+    const response = await axios.get(API_URL, {
+      headers: {
+        Authorization: `Bearer ${TOKEN}`
       }
-    );
+    });
 
-    const token =
-      login.data.data.accessToken;
+    const orders = response.data?.data?.items || [];
 
-    console.log('Login berhasil');
-
-    const response = await axios.get(
-      API_URL,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-
-    const orders =
-      response.data?.data?.items || [];
-
-    console.log(
-      `Jumlah order ditemukan: ${orders.length}`
-    );
+    console.log(`Jumlah order: ${orders.length}`);
 
     for (const order of orders) {
       try {
-        await axios.post(GAS_URL, {
+        const result = await axios.post(GAS_URL, {
           orderNumber: order.orderNumber,
           username: order.username,
           robux: order.robux,
           totalAmount: order.totalAmount,
-          customerEmail:
-            order.customerEmail,
+          customerEmail: order.customerEmail,
           createdAt: order.createdAt
         });
 
         console.log(
-          `Berhasil kirim ${order.orderNumber}`
+          `Terkirim: ${order.orderNumber}`,
+          result.data
         );
       } catch (err) {
         console.error(
           `Gagal kirim ${order.orderNumber}`
         );
-
         console.error(
-          err.response?.data ||
-          err.message
+          err.response?.data || err.message
         );
       }
     }
   } catch (err) {
-    console.error('ERROR');
-
     console.error(
-      err.response?.data ||
-      err.message
+      'Gagal ambil order:'
+    );
+    console.error(
+      err.response?.data || err.message
+    );
+    console.error(
+      'Kemungkinan token sudah expired.'
     );
   }
 }
